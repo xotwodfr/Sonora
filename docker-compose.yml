@@ -1,0 +1,24 @@
+services:
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      PORT: "8787"
+      MUSIC_PATH: /music
+      DATA_PATH: /data
+    volumes:
+      - /Media/Media/Music:/music:ro          # ← your music library (read-only)
+      - sonora-data:/data          # SQLite + artwork cache (persistent)
+    expose:
+      - "8787"
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"                  # open http://localhost:3000 in your browser
+    depends_on:
+      - backend
+
+volumes:
+  sonora-data:

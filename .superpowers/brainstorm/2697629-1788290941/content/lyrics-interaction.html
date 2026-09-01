@@ -1,0 +1,127 @@
+<h2>Lyrics Interaction Model</h2>
+<p class="subtitle">Click any lyric line to seek playback to that timestamp</p>
+
+<div class="mockup">
+  <div class="mockup-header">Synced Lyrics — Active State</div>
+  <div class="mockup-body" style="padding: 24px; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius: 16px; min-height: 400px;">
+    <div style="max-width: 320px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+
+      <!-- Past line - reduced opacity -->
+      <p style="color: rgba(255,255,255,0.35); font-size: 16px; line-height: 1.8; text-align: center; margin: 8px 0; cursor: pointer; transition: all 0.3s ease;">
+        Walking through the morning rain
+      </p>
+
+      <!-- Past line - reduced opacity -->
+      <p style="color: rgba(255,255,255,0.35); font-size: 16px; line-height: 1.8; text-align: center; margin: 8px 0; cursor: pointer; transition: all 0.3s ease;">
+        Searching for a place to hide
+      </p>
+
+      <!-- Active line - full emphasis -->
+      <p style="color: rgba(255,255,255,1); font-size: 20px; font-weight: 600; line-height: 1.8; text-align: center; margin: 12px 0; transform: scale(1.05); text-shadow: 0 0 20px rgba(255,255,255,0.3); cursor: pointer; transition: all 0.3s ease; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent); padding: 4px 16px; border-radius: 8px;">
+        Finding solace in the sound
+      </p>
+
+      <!-- Upcoming line - slightly reduced -->
+      <p style="color: rgba(255,255,255,0.6); font-size: 16px; line-height: 1.8; text-align: center; margin: 8px 0; cursor: pointer; transition: all 0.3s ease;">
+        Of words that speak my mind
+      </p>
+
+      <!-- Upcoming line - slightly reduced -->
+      <p style="color: rgba(255,255,255,0.5); font-size: 16px; line-height: 1.8; text-align: center; margin: 8px 0; cursor: pointer; transition: all 0.3s ease;">
+        Each verse a stepping stone
+      </p>
+
+      <!-- Upcoming line - slightly reduced -->
+      <p style="color: rgba(255,255,255,0.4); font-size: 16px; line-height: 1.8; text-align: center; margin: 8px 0; cursor: pointer; transition: all 0.3s ease;">
+        To somewhere I belong
+      </p>
+
+    </div>
+  </div>
+</div>
+
+<div style="margin-top: 24px;">
+  <h3>Interaction Behavior</h3>
+
+  <div class="options">
+    <div class="option" data-choice="click-seek" onclick="toggleSelect(this)">
+      <div class="letter">1</div>
+      <div class="content">
+        <h3>Click-to-Seek</h3>
+        <p>Tap any line to seek playback to that timestamp. Auto-follow immediately resumes. Touch and mouse supported.</p>
+      </div>
+    </div>
+
+    <div class="option" data-choice="auto-follow" onclick="toggleSelect(this)">
+      <div class="letter">2</div>
+      <div class="content">
+        <h3>Smart Auto-Follow</h3>
+        <p>Lyrics scroll automatically with playback. When user manually scrolls, auto-follow suspends. Clicking a line restores it.</p>
+      </div>
+    </div>
+
+    <div class="option" data-choice="emphasis" onclick="toggleSelect(this)">
+      <div class="letter">3</div>
+      <div class="content">
+        <h3>Emphasis Gradient</h3>
+        <p>Active line is full opacity + scale. Past lines fade to 35%. Upcoming lines gradually increase opacity toward active.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div style="margin-top: 24px;">
+  <h3>Visual Direction</h3>
+  <p class="subtitle">Keeping Sonora's liquid-glass aesthetic</p>
+
+  <div class="split">
+    <div class="mockup">
+      <div class="mockup-header">Current (Basic)</div>
+      <div class="mockup-body" style="padding: 16px; background: #1a1a2e; border-radius: 12px;">
+        <p style="color: rgba(255,255,255,0.5); font-size: 14px; text-align: center; line-height: 1.6;">
+          Walking through the morning rain<br>
+          Searching for a place to hide<br>
+          <span style="color: white; font-weight: 600;">Finding solace in the sound</span><br>
+          Of words that speak my mind
+        </p>
+        <p style="color: rgba(255,255,255,0.3); font-size: 11px; text-align: center; margin-top: 12px;">
+          • Static colors<br>
+          • Basic scale on active<br>
+          • No click-to-seek
+        </p>
+      </div>
+    </div>
+
+    <div class="mockup">
+      <div class="mockup-header">Proposed (Spicy-inspired)</div>
+      <div class="mockup-body" style="padding: 16px; background: linear-gradient(135deg, #1a1a2e, #16213e); border-radius: 12px;">
+        <p style="color: rgba(255,255,255,0.3); font-size: 14px; text-align: center; line-height: 1.6;">
+          Walking through the morning rain<br>
+          Searching for a place to hide<br>
+        </p>
+        <p style="color: white; font-size: 16px; font-weight: 600; text-align: center; line-height: 1.6; transform: scale(1.05); text-shadow: 0 0 15px rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 6px; background: rgba(255,255,255,0.06);">
+          Finding solace in the sound
+        </p>
+        <p style="color: rgba(255,255,255,0.55); font-size: 14px; text-align: center; line-height: 1.6;">
+          Of words that speak my mind<br>
+          Each verse a stepping stone
+        </p>
+        <p style="color: rgba(255,255,255,0.3); font-size: 11px; text-align: center; margin-top: 12px;">
+          • Opacity gradient<br>
+          • Scale + glow on active<br>
+          • Click to seek ✓
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div style="margin-top: 32px; padding: 16px; background: rgba(255,255,255,0.05); border-radius: 12px;">
+  <h3>Key Design Decisions</h3>
+  <ul style="color: rgba(255,255,255,0.7); font-size: 14px; line-height: 1.8; padding-left: 20px;">
+    <li><strong>Reuse existing store:</strong> Add seek + scroll-suspend state to lyricsStore (no new player implementation)</li>
+    <li><strong>Single component:</strong> Same LyricsView in FullScreenPlayer, NowPlayingBar opens it, MobileDock opens it</li>
+    <li><strong>Touch-friendly:</strong> Minimum 44px tap targets, pointer-events on each line</li>
+    <li><strong>No instrumental gaps:</strong> Lines without timestamps stay visible but aren't seekable</li>
+  </ul>
+</div>

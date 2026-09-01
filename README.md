@@ -17,7 +17,7 @@ mkdir -p music
 # cp -r /path/to/your/music/* music/
 
 # 3. Launch everything
-docker compose up --build
+docker compose up -d --build
 
 # 4. Open http://localhost:3000 in your browser
 ```

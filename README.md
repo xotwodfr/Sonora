@@ -10,7 +10,9 @@ shuffle, repeat, and a full-screen player.
 
 ```bash
 # 1. Clone and enter the project
-git clone <repo-url> && cd Sonora
+git clone https://github.com/xotwodfr/Sonora.git
+
+cd Sonora
 
 # 2. Drop your music somewhere (or symlink an existing folder)
 mkdir -p music

@@ -50,7 +50,7 @@ function rgbToHsl(r: number, g: number, b: number): [number, number, number] {
 }
 
 /** Convert HSL to RGB. h in 0-360, s/l in 0-100. */
-function hslToRgb(h: number, s: number, l: number): [number, number, number] {
+export function hslToRgb(h: number, s: number, l: number): [number, number, number] {
   h /= 360; s /= 100; l /= 100;
   let r: number, g: number, b: number;
   if (s === 0) {

@@ -42,9 +42,9 @@ export function Sidebar() {
 
   return (
     <aside
-      className={`sidebar glass-backdrop relative z-30 flex flex-col border-r border-[var(--glass-border)] bg-[var(--bg)]/70 ${
+      className={`sidebar glass-backdrop relative z-30 hidden flex-col border-r border-[var(--glass-border)] bg-[var(--bg)]/70 ${
         collapsed ? 'w-[4.5rem]' : 'w-60'
-      } transition-[width] duration-300 ease-glass`}
+      } transition-[width] lg:flex duration-300 ease-glass`}
       aria-label="Sidebar"
     >
       {/* Brand */}

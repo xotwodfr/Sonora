@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { extractPalette, type AlbumPalette } from '../lib/colorExtract';
+import { extractPalette, hslToRgb, type AlbumPalette } from '../lib/colorExtract';
 import { usePlayerStore } from './playerStore';
 import { useSettingsStore } from './settingsStore';
 import { artworkUrl } from '../lib/api';
@@ -14,12 +14,20 @@ interface ThemeState {
 }
 
 /**
- * Parse an rgb() or hsl() string to extract [r, g, b] values.
+ * Parse an rgb(), hsl() or #rrggbb string to extract [r, g, b] values.
  */
 function parseColor(color: string): [number, number, number] | null {
   const rgbMatch = color.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
   if (rgbMatch) {
     return [parseInt(rgbMatch[1]), parseInt(rgbMatch[2]), parseInt(rgbMatch[3])];
+  }
+  const hexMatch = color.match(/^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i);
+  if (hexMatch) {
+    return [parseInt(hexMatch[1], 16), parseInt(hexMatch[2], 16), parseInt(hexMatch[3], 16)];
+  }
+  const hslMatch = color.match(/hsl\((\d+(?:\.\d+)?),\s*(\d+(?:\.\d+)?)%,\s*(\d+(?:\.\d+)?)%\)/);
+  if (hslMatch) {
+    return hslToRgb(parseFloat(hslMatch[1]), parseFloat(hslMatch[2]), parseFloat(hslMatch[3]));
   }
   return null;
 }

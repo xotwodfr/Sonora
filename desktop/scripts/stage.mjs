@@ -12,10 +12,14 @@ const backend = path.join(root, 'backend');
 const app = path.join(desktop, 'app');
 
 const run = (cmd, cwd) => execSync(cmd, { cwd, stdio: 'inherit' });
-const ensureDeps = (dir) => { if (!fs.existsSync(path.join(dir, 'node_modules'))) run('npm ci', dir); };
+const ensureDeps = (dir, flags = '') => {
+  if (!fs.existsSync(path.join(dir, 'node_modules'))) run(`npm ci ${flags}`.trim(), dir);
+};
 
+// better-sqlite3 ships prebuilt binaries for every platform, so its install script
+// (which would compile it with node-gyp and needs a C++ toolchain) is skipped.
 ensureDeps(frontend);
-ensureDeps(backend);
+ensureDeps(backend, '--ignore-scripts');
 run('npm run build', frontend);
 run('npm run build', backend);
 
@@ -44,5 +48,5 @@ const pkg = {
 };
 fs.writeFileSync(path.join(app, 'package.json'), JSON.stringify(pkg, null, 2) + '\n');
 fs.copyFileSync(path.join(backend, 'package-lock.json'), path.join(app, 'package-lock.json'));
-run('npm ci --omit=dev', app);
+run('npm ci --omit=dev --ignore-scripts', app);
 console.log(`\nStaged ${app}`);

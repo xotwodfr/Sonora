@@ -1,10 +1,12 @@
 name: Release Windows app
 
-# Pushing a tag like v0.1.0 builds the portable .exe on Windows and attaches it
-# to a GitHub Release. "Run workflow" builds it too and keeps it as a build artifact.
+# Publishes the portable .exe as a GitHub Release. Either push a tag like v0.1.0,
+# or push a branch named release/v0.1.0 (the workflow then creates the v0.1.0 tag
+# itself). "Run workflow" just builds it and keeps it as a build artifact.
 on:
   push:
     tags: ['v*']
+    branches: ['release/v*']
   workflow_dispatch:
 
 permissions:
@@ -35,17 +37,30 @@ jobs:
           $hash = (Get-FileHash $exe.FullName -Algorithm SHA256).Hash.ToLower()
           "$hash  $($exe.Name)" | Out-File -Encoding ascii "$($exe.FullName).sha256"
 
+      - name: Work out the release tag
+        id: tag
+        if: github.event_name == 'push'
+        shell: pwsh
+        env:
+          REF: ${{ github.ref }}
+        run: |
+          if ($env:REF -like 'refs/tags/*') { $name = $env:REF.Substring('refs/tags/'.Length) }
+          else { $name = $env:REF -replace '^refs/heads/release/', '' }
+          "name=$name" >> $env:GITHUB_OUTPUT
+
       - name: Publish release
-        if: startsWith(github.ref, 'refs/tags/')
+        if: github.event_name == 'push'
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ steps.tag.outputs.name }}
+          target_commitish: ${{ github.sha }}
           files: |
             desktop/dist/Sonora-*-portable.exe
             desktop/dist/Sonora-*-portable.exe.sha256
           generate_release_notes: true
 
       - name: Keep build artifact
-        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+        if: github.event_name != 'push'
         uses: actions/upload-artifact@v4
         with:
           name: Sonora-portable

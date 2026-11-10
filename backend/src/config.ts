@@ -9,7 +9,10 @@ import fs from 'node:fs';
 
 export interface Config {
   port: number;
-  /** Absolute path to the mounted (read-only) music library. */
+  /**
+   * Absolute path to the music library, or '' when none is chosen yet. Mutable:
+   * the desktop app lets the user pick a folder at runtime (see settings.ts).
+   */
   musicPath: string;
   /** Writable directory for the database, artwork cache, and app data. */
   dataPath: string;
@@ -34,7 +37,7 @@ function makeConfig(): Config {
 
   return {
     port: parseInt(process.env.PORT ?? '8787', 10),
-    musicPath: resolveDir('MUSIC_PATH', '/music'),
+    musicPath: resolveDir('MUSIC_PATH', ''),
     dataPath,
     dbPath: path.join(dataPath, 'sonora.db'),
     artworkPath,

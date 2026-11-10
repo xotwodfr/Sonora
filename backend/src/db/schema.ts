@@ -163,4 +163,21 @@ export const MIGRATIONS: Array<{ id: number; name: string; sql: string }> = [
       ALTER TABLE tracks ADD COLUMN has_lyrics INTEGER DEFAULT 0;
     `,
   },
+  {
+    id: 4,
+    name: 'lyrics-cache',
+    sql: `
+      -- Lyrics fetched from Spicy Lyrics, incl. "no lyrics" answers so we do
+      -- not re-query the API every time a track plays.
+      CREATE TABLE IF NOT EXISTS lyrics_cache (
+        track_id   INTEGER PRIMARY KEY,
+        status     TEXT NOT NULL,       -- 'found' | 'none'
+        spotify_id TEXT,
+        source     TEXT,
+        payload    TEXT,                -- JSON LyricsResult when found
+        fetched_at INTEGER NOT NULL,
+        FOREIGN KEY (track_id) REFERENCES tracks(id) ON DELETE CASCADE
+      );
+    `,
+  },
 ];

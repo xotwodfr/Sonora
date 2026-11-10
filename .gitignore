@@ -5,3 +5,7 @@ dist/
 Thumbs.db
 .playwright-mcp/
 *.png
+
+# Desktop app build output (the app icon is the one PNG we do commit)
+desktop/app/
+!desktop/build/icon.png

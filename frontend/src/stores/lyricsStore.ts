@@ -1,12 +1,15 @@
 import { create } from 'zustand';
-import { api } from '../lib/api';
+import { api, type LyricsAttribution, type LyricsLine, type LyricsSource } from '../lib/api';
 import { parseLrc } from '../lib/lrc';
 import { usePlayerStore } from './playerStore';
 
 export interface ParsedLyrics {
   synced: boolean;
-  lines: Array<{ time: number; text: string }> | null;
+  lines: LyricsLine[] | null;
   plainText: string | null;
+  /** Where the lyrics came from; online sources must be credited in the UI. */
+  source?: LyricsSource;
+  attribution?: LyricsAttribution;
 }
 
 interface LyricsState {
@@ -68,12 +71,13 @@ export const useLyricsStore = create<LyricsState>((set, get) => ({
         // Normalize synced lines: ensure each has a valid time (number) and text (string).
         const lines = raw.lines
           .map((l) => ({
+            ...l,
             time: typeof l.time === 'number' ? l.time : 0,
             text: typeof l.text === 'string' ? l.text : '',
           }))
           .filter((l) => l.text.length > 0);
         if (lines.length > 0) {
-          parsed = { synced: true, lines, plainText: null };
+          parsed = { synced: true, lines, plainText: null, source: raw.source, attribution: raw.attribution };
         } else if (raw.plainText && typeof raw.plainText === 'string') {
           const lrcLines = parseLrc(raw.plainText);
           parsed = lrcLines.length > 0
@@ -88,7 +92,7 @@ export const useLyricsStore = create<LyricsState>((set, get) => ({
         if (lrcLines.length > 0) {
           parsed = { synced: true, lines: lrcLines, plainText: null };
         } else {
-          parsed = { synced: false, lines: null, plainText: raw.plainText };
+          parsed = { synced: false, lines: null, plainText: raw.plainText, source: raw.source, attribution: raw.attribution };
         }
       } else {
         parsed = { synced: false, lines: null, plainText: null };

@@ -1,0 +1,28 @@
+appId: app.sonora.desktop
+productName: Sonora
+directories:
+  app: app
+  buildResources: build
+  output: dist
+# better-sqlite3 ships N-API prebuilds for every platform inside its package, so
+# nothing needs compiling or rebuilding for Electron / Windows.
+npmRebuild: false
+asar: true
+asarUnpack:
+  - "**/*.node"
+files:
+  - "**/*"
+  # Only the Windows prebuild is needed, and not the SQLite C sources.
+  - "!node_modules/better-sqlite3/prebuilds/{darwin,linux,linuxmusl}-*.node"
+  - "!node_modules/better-sqlite3/prebuilds/win32-arm64.node"
+  - "!node_modules/better-sqlite3/{deps,src}/**"
+  - "!**/*.{md,markdown,map,ts}"
+win:
+  target:
+    - target: portable
+      arch: x64
+  icon: build/icon.png
+  # Building on Linux without Wine: skip the step that edits the exe's resources.
+  signAndEditExecutable: false
+portable:
+  artifactName: Sonora-${version}-portable.exe

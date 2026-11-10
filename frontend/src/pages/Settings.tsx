@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Music,
   Mic2,
@@ -8,9 +8,12 @@ import {
   Gauge,
   Info,
   RotateCcw,
+  FolderOpen,
+  KeyRound,
   type LucideIcon,
 } from 'lucide-react';
 import { useSettingsStore } from '../stores/settingsStore';
+import { api, type AppSettings } from '../lib/api';
 import type { LyricsMode, AnimationIntensity, UiDensity, PlayerView } from '../stores/settingsStore';
 
 type Section = 'playback' | 'lyrics' | 'appearance' | 'player' | 'library' | 'performance' | 'about';
@@ -264,12 +267,140 @@ function PlaybackSection() {
   );
 }
 
+/** Spicy Lyrics API key: saved locally, never shown again, tested before/after saving. */
+function OnlineLyricsCard() {
+  const [settings, setSettings] = useState<AppSettings | null>(null);
+  const [key, setKey] = useState('');
+  const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => { api.getSettings().then(setSettings).catch(() => {}); }, []);
+
+  async function test() {
+    setBusy(true);
+    try {
+      const r = await api.testSpicyKey(key.trim() || undefined);
+      setMessage({ ok: r.ok, text: r.ok ? 'Key works.' : r.error ?? 'Key did not work.' });
+    } catch (err) {
+      setMessage({ ok: false, text: err instanceof Error ? err.message : 'Test failed' });
+    }
+    setBusy(false);
+  }
+
+  async function save(next: string | null) {
+    setBusy(true);
+    try {
+      setSettings(await api.saveSettings({ spicyLyricsKey: next }));
+      setKey('');
+      setMessage({ ok: true, text: next ? 'Saved on this computer.' : 'Key removed.' });
+    } catch (err) {
+      setMessage({ ok: false, text: err instanceof Error ? err.message : 'Could not save' });
+    }
+    setBusy(false);
+  }
+
+  const configured = settings?.spicyLyrics.configured;
+  return (
+    <div className="glass rounded-xl p-4">
+      <div className="flex items-center gap-2">
+        <KeyRound className="h-4 w-4 text-[var(--text-secondary)]" strokeWidth={2} />
+        <p className="text-sm font-medium">Online lyrics (Spicy Lyrics)</p>
+      </div>
+      <p className="mt-1 text-xs leading-relaxed text-[var(--text-tertiary)]">
+        Tracks are matched to Spotify by title, artist, album and length, then their lyrics are fetched from Spicy Lyrics.
+        Lyrics files next to your music (.ttml, .lrc, .txt) always take priority. Your key stays on this computer and is
+        only sent to api.spicylyrics.org.
+      </p>
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <input
+          type="password"
+          value={key}
+          onChange={(e) => { setKey(e.target.value); setMessage(null); }}
+          placeholder={configured ? `Saved (${settings?.spicyLyrics.hint}) — paste a new key to replace` : 'Paste your API key'}
+          aria-label="Spicy Lyrics API key"
+          autoComplete="off"
+          spellCheck={false}
+          className="min-w-0 flex-1 rounded-lg border border-[var(--glass-border)] bg-[var(--glass-fill)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
+        />
+        <button type="button" disabled={busy || (!key.trim() && !configured)} onClick={test}
+          className="rounded-lg border border-[var(--glass-border)] px-3 py-2 text-sm hover:bg-[var(--surface-2)] disabled:opacity-50">
+          Test
+        </button>
+        <button type="button" disabled={busy || !key.trim()} onClick={() => save(key.trim())}
+          className="btn-accent !px-4 !py-2 text-sm disabled:opacity-50">
+          Save
+        </button>
+        {configured && (
+          <button type="button" disabled={busy} onClick={() => save(null)}
+            className="rounded-lg px-3 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--surface-2)]">
+            Remove
+          </button>
+        )}
+      </div>
+      {message && (
+        <p role="status" className={`mt-2 text-xs ${message.ok ? 'text-emerald-400' : 'text-red-400'}`}>{message.text}</p>
+      )}
+    </div>
+  );
+}
+
+/** The music folder: shown always; changeable with the native dialog in the desktop app. */
+function MusicFolderRow() {
+  const [settings, setSettings] = useState<AppSettings | null>(null);
+  const [state, setState] = useState<'idle' | 'scanning'>('idle');
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => { api.getSettings().then(setSettings).catch(() => {}); }, []);
+
+  async function change() {
+    const picked = await window.sonoraDesktop?.chooseFolder();
+    if (!picked) return;
+    setError(null);
+    setState('scanning');
+    try {
+      await api.saveSettings({ musicPath: picked });
+      for (;;) {
+        await new Promise((r) => setTimeout(r, 500));
+        if (!(await api.libraryStatus()).scan.running) break;
+      }
+      // Playlists, queue and caches all refer to the old library: start fresh from the new one.
+      window.location.reload();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not use that folder');
+      setState('idle');
+    }
+  }
+
+  return (
+    <>
+      <SettingRow
+        label="Music folder"
+        description={settings?.musicPath ?? 'No folder chosen'}
+      >
+        {settings?.desktop && (
+          <button type="button" onClick={change} disabled={state === 'scanning'}
+            className="flex items-center gap-2 rounded-lg border border-[var(--glass-border)] px-3 py-2 text-sm hover:bg-[var(--surface-2)] disabled:opacity-50">
+            <FolderOpen className="h-4 w-4" />
+            {state === 'scanning' ? 'Scanning…' : 'Change…'}
+          </button>
+        )}
+      </SettingRow>
+      {error && <p role="alert" className="pb-2 text-xs text-red-400">{error}</p>}
+      <Divider />
+    </>
+  );
+}
+
 function LyricsSection() {
   const { lyrics, updateLyrics } = useSettingsStore();
 
   return (
     <>
       <SectionTitle>Lyrics</SectionTitle>
+
+      <OnlineLyricsCard />
+
+      <Divider />
 
       <SettingRow label="Display mode" description="How synced lyrics are presented">
         <Select<LyricsMode>
@@ -457,6 +588,8 @@ function LibrarySection() {
   return (
     <>
       <SectionTitle>Library</SectionTitle>
+
+      <MusicFolderRow />
 
       <SettingRow label="Default sort" description="Song list sort order">
         <Select

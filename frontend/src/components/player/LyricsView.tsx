@@ -1,7 +1,9 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
 import { motion } from 'framer-motion';
 import { MicOff } from 'lucide-react';
-import { useLyricsStore } from '../../stores/lyricsStore';
+import { useLyricsStore, type ParsedLyrics } from '../../stores/lyricsStore';
+import { usePlayerStore } from '../../stores/playerStore';
+import type { LyricsLine, LyricsSource } from '../../lib/api';
 import { useSettingsStore, type LyricsMode } from '../../stores/settingsStore';
 
 /** Shared lyrics display — rendered inside the full-screen player. */
@@ -37,7 +39,95 @@ export function LyricsView() {
       {!loading && currentLyrics && !currentLyrics.synced && currentLyrics.plainText && (
         <UnsyncedLyrics text={currentLyrics.plainText} />
       )}
+      {!loading && currentLyrics && <LyricsCredit lyrics={currentLyrics} />}
     </motion.div>
+  );
+}
+
+const PROVIDER_NAME: Partial<Record<LyricsSource, string>> = {
+  spicy_lyrics: 'Spicy Lyrics',
+  apple_music: 'Apple Music',
+  spotify: 'Spotify',
+};
+
+function CreditLink({ name, url }: { name: string; url?: string }) {
+  if (!url) return <span>{name}</span>;
+  return (
+    <a href={url} target="_blank" rel="noopener noreferrer" className="underline decoration-dotted underline-offset-2 hover:text-[var(--text)]">
+      {name}
+    </a>
+  );
+}
+
+/**
+ * Credit for online lyrics. Spicy Lyrics' terms require the provider to be shown
+ * with the lyrics, plus the uploader and maker for community syncs. Lyrics from
+ * the user's own files need no credit.
+ */
+function LyricsCredit({ lyrics }: { lyrics: ParsedLyrics }) {
+  const provider = lyrics.source ? PROVIDER_NAME[lyrics.source] : undefined;
+  if (!provider) return null;
+  const a = lyrics.attribution;
+  return (
+    <p className="shrink-0 px-6 pb-3 pt-2 text-center text-xs leading-snug text-[var(--text-secondary)]">
+      Lyrics from {provider}
+      {lyrics.source !== 'spicy_lyrics' && ' via Spicy Lyrics'}
+      {a?.uploader && (
+        <>
+          {' · uploaded by '}
+          <CreditLink name={a.uploader.username} url={a.uploader.url} />
+          {a.maker && (
+            <>
+              {', made by '}
+              <CreditLink name={a.maker.username} url={a.maker.url} />
+            </>
+          )}
+        </>
+      )}
+    </p>
+  );
+}
+
+/** Word-by-word fill for the active line of word-synced lyrics. */
+function SyllableText({ line }: { line: LyricsLine }) {
+  const [t, setT] = useState(() => usePlayerStore.getState().audio?.currentTime ?? 0);
+  useEffect(() => {
+    let raf = 0;
+    const tick = () => {
+      setT(usePlayerStore.getState().audio?.currentTime ?? 0);
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
+  const syl = line.syllables ?? [];
+  // Background vocals aren't timed; they stay in the line, dimmed, after the sung words.
+  const lead = syl.map((sy, i) => sy.text + (sy.partOfWord || i === syl.length - 1 ? '' : ' ')).join('');
+  const rest = line.text.startsWith(lead) ? line.text.slice(lead.length) : '';
+  return (
+    <span>
+      {syl.map((sy, i) => {
+        const span = Math.max(0.001, sy.end - sy.start);
+        const pct = Math.min(100, Math.max(0, ((t - sy.start) / span) * 100));
+        return (
+          <span key={i}>
+            <span
+              style={{
+                backgroundImage: `linear-gradient(90deg, var(--text) ${pct}%, var(--text-secondary) ${pct}%)`,
+                WebkitBackgroundClip: 'text',
+                backgroundClip: 'text',
+                color: 'transparent',
+              }}
+            >
+              {sy.text}
+            </span>
+            {!sy.partOfWord && i < syl.length - 1 ? ' ' : ''}
+          </span>
+        );
+      })}
+      {rest && <span style={{ color: 'var(--text-secondary)' }}>{rest}</span>}
+    </span>
   );
 }
 
@@ -47,7 +137,7 @@ function LyricsContent({
   activeIndex,
   mode,
 }: {
-  lines: Array<{ time: number; text: string }>;
+  lines: LyricsLine[];
   activeIndex: number;
   mode: LyricsMode;
 }) {
@@ -145,7 +235,7 @@ function SpicyLyrics({
   lines,
   activeIndex,
 }: {
-  lines: Array<{ time: number; text: string }>;
+  lines: LyricsLine[];
   activeIndex: number;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -207,10 +297,11 @@ function SpicyLyrics({
                 minHeight: '44px',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center',
+                justifyContent: line.oppositeAligned ? 'flex-end' : 'center',
+                textAlign: line.oppositeAligned ? 'right' : 'center',
               }}
             >
-              {line.text || ' '}
+              {isActive && line.syllables?.length ? <SyllableText line={line} /> : line.text || ' '}
             </p>
           );
         })}

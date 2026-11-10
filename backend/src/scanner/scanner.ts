@@ -18,11 +18,11 @@ import config from '../config.js';
  * a single transaction so the library stays consistent.
  */
 
-/** Check for sidecar .lrc or .txt lyrics file next to an audio file. */
+/** Check for a sidecar .ttml, .lrc or .txt lyrics file next to an audio file. */
 function hasSidecarLyrics(audioPath: string): boolean {
   const base = audioPath.slice(0, audioPath.lastIndexOf('.'));
   try {
-    return fs.existsSync(`${base}.lrc`) || fs.existsSync(`${base}.txt`);
+    return ['ttml', 'lrc', 'txt'].some((ext) => fs.existsSync(`${base}.${ext}`));
   } catch {
     return false;
   }
@@ -156,6 +156,17 @@ export async function scanLibrary(): Promise<ScanProgress> {
   const root = config.musicPath;
 
   try {
+    // Refuse to scan a missing folder (unplugged drive, deleted folder, nothing
+    // chosen yet): an empty result would otherwise delete every track, and
+    // with it the playlists and favourites that reference them.
+    if (!root || !fs.existsSync(root) || !fs.statSync(root).isDirectory()) {
+      progress.phase = 'error';
+      progress.message = root
+        ? `Music folder not found: ${root}`
+        : 'No music folder chosen yet';
+      return { ...progress };
+    }
+
     // Snapshot existing paths → id, and existing stats for change detection.
     const existing = new Map<string, number>();
     const existingTracks = db.prepare(
@@ -165,9 +176,7 @@ export async function scanLibrary(): Promise<ScanProgress> {
 
     // Collect candidate files.
     const files: string[] = [];
-    if (fs.existsSync(root)) {
-      await walk(root, files);
-    }
+    await walk(root, files);
     progress.filesFound = files.length;
     progress.message = 'Reading and updating tracks…';
 
@@ -261,7 +270,13 @@ export async function scanLibrary(): Promise<ScanProgress> {
       const stmt = db.prepare('DELETE FROM tracks WHERE id = ?');
       for (const id of ids) stmt.run(id);
     });
-    const orphanIds = [...existing.values()];
+    // Only forget a track when its file is provably gone and the library folder
+    // itself is still there. A drive unplugged mid-scan or a file that failed to
+    // read must not wipe the library (and its playlists and favourites).
+    const rootStillThere = fs.existsSync(root);
+    const orphanIds = rootStillThere
+      ? [...existing.entries()].filter(([file]) => !fs.existsSync(file)).map(([, id]) => id)
+      : [];
     if (orphanIds.length > 0) deleteTx(orphanIds);
     progress.filesDeleted = orphanIds.length;
 

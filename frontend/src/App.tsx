@@ -1,4 +1,7 @@
+import { useEffect, useState } from 'react';
 import { Route, Routes, Navigate } from 'react-router-dom';
+import { api, type AppSettings } from './lib/api';
+import { Welcome } from './components/Welcome';
 import { AppShell } from './components/layout/AppShell';
 import { ListenNow } from './pages/ListenNow';
 import { RecentlyAdded } from './pages/RecentlyAdded';
@@ -15,6 +18,17 @@ import { Favorites } from './pages/Favorites';
 import { Settings } from './pages/Settings';
 
 export default function App() {
+  // First run: no music folder chosen yet. Show the welcome screen instead of an empty app.
+  const [settings, setSettings] = useState<AppSettings | null>(null);
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    api.getSettings().then(setSettings).catch(() => setReady(true));
+  }, []);
+  if (settings && !settings.musicPath && !ready) {
+    return <Welcome settings={settings} onReady={() => setReady(true)} />;
+  }
+  if (!settings && !ready) return null;
+
   return (
     <Routes>
       <Route element={<AppShell />}>

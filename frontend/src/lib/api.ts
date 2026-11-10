@@ -11,15 +11,57 @@ import type {
 
 // ---- Lyrics types ----
 
+/** One word/syllable of a word-synced line (seconds from track start). */
+export interface LyricsSyllable {
+  text: string;
+  start: number;
+  end: number;
+  /** The next syllable continues the same word: no space between them. */
+  partOfWord?: boolean;
+}
+
 export interface LyricsLine {
   time: number;
   text: string;
+  end?: number;
+  /** Present for word-level sync. */
+  syllables?: LyricsSyllable[];
+  /** Secondary singer: render on the opposite side. */
+  oppositeAligned?: boolean;
+}
+
+export type LyricsSource =
+  | 'embedded'
+  | 'sidecar-ttml'
+  | 'sidecar-lrc'
+  | 'sidecar-txt'
+  | 'spicy_lyrics'
+  | 'apple_music'
+  | 'spotify';
+
+export interface LyricsAttribution {
+  uploader?: { username: string; url?: string };
+  maker?: { username: string; url?: string };
 }
 
 export interface LyricsResponse {
   synced: boolean;
   lines: LyricsLine[] | null;
   plainText: string | null;
+  source?: LyricsSource;
+  /** Only for community syncs; must be shown with the lyrics. */
+  attribution?: LyricsAttribution;
+}
+
+// ---- App settings (folder + online lyrics key) ----
+
+export interface AppSettings {
+  /** Chosen music folder, or null before first run. */
+  musicPath: string | null;
+  /** Running inside the desktop app (native folder picker available). */
+  desktop: boolean;
+  /** The key itself is never returned, only whether one is saved. */
+  spicyLyrics: { configured: boolean; hint: string | null };
 }
 
 /**
@@ -87,6 +129,16 @@ export const api = {
   // ---- Library ----
   libraryStatus: () => reqEnvelope<LibraryStatus>('/api/library/status'),
   scanLibrary: () => reqEnvelope<{ started: boolean }>('/api/library/scan', { method: 'POST' }),
+
+  // ---- Settings ----
+  getSettings: () => reqEnvelope<AppSettings>('/api/settings'),
+  saveSettings: (patch: { musicPath?: string; spicyLyricsKey?: string | null }) =>
+    reqEnvelope<AppSettings>('/api/settings', { method: 'PUT', body: JSON.stringify(patch) }),
+  testSpicyKey: (key?: string) =>
+    reqEnvelope<{ ok: boolean; error?: string }>('/api/settings/spicy-lyrics/test', {
+      method: 'POST',
+      body: JSON.stringify({ key }),
+    }),
 
   // ---- Tracks ----
   getTracks: (params: Record<string, string | number | boolean> = {}) => {

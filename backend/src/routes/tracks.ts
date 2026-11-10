@@ -1,9 +1,9 @@
 import { Router } from 'express';
 import fs from 'node:fs';
 import path from 'node:path';
-import { parseFile } from 'music-metadata';
 import { getDb } from '../db/index.js';
 import { getTrack } from '../db/library.js';
+import { getLyricsForTrack } from '../lyrics/service.js';
 import { parsePaging, parseSort, sendPaged, ok, notFound, asyncHandler } from '../api/helpers.js';
 
 const router = Router();
@@ -194,119 +194,16 @@ router.delete('/:id/favorite', (req, res) => {
   return ok(res, { id, favorite: false });
 });
 
-/** Parse standard LRC format lyrics into timed lines. */
-function parseLrc(content: string): Array<{ time: number; text: string }> {
-  const lines: Array<{ time: number; text: string }> = [];
-  const regex = /\[(\d{1,2}):(\d{2})(?:\.(\d{2,3}))?\]/g;
-  for (const raw of content.split('\n')) {
-    const times: number[] = [];
-    let match: RegExpExecArray | null;
-    regex.lastIndex = 0;
-    while ((match = regex.exec(raw)) !== null) {
-      const min = parseInt(match[1], 10);
-      const sec = parseInt(match[2], 10);
-      const msStr = match[3] ?? '0';
-      const ms = parseInt(msStr.padEnd(3, '0'), 10);
-      times.push(min * 60 + sec + ms / 1000);
-    }
-    if (times.length === 0) continue;
-    const text = raw.replace(/\[\d{1,2}:\d{2}(?:\.\d{2,3})?\]/g, '').trim();
-    for (const time of times) {
-      lines.push({ time, text });
-    }
-  }
-  return lines.sort((a, b) => a.time - b.time);
-}
-
-/** Try to read sidecar lyrics file (.lrc or .txt). */
-function readSidecarLyrics(audioPath: string): { synced: boolean; content: string } | null {
-  const base = audioPath.slice(0, audioPath.lastIndexOf('.'));
-  for (const ext of ['lrc', 'txt']) {
-    const candidate = `${base}.${ext}`;
-    try {
-      if (fs.existsSync(candidate)) {
-        const content = fs.readFileSync(candidate, 'utf-8');
-        return { synced: ext === 'lrc', content };
-      }
-    } catch {
-      // continue
-    }
-  }
-  return null;
-}
-
-/** GET /api/tracks/:id/lyrics — on-demand lyrics for the current track. */
+/**
+ * GET /api/tracks/:id/lyrics — lyrics for a track (local .ttml/.lrc/.txt or
+ * embedded, else Spicy Lyrics when a key is set). ?refresh=1 skips the cache.
+ */
 router.get('/:id/lyrics', asyncHandler(async (req, res) => {
   const id = Number(req.params.id);
   const row = getTrack(id);
   if (!row || !row.file_path) return notFound(res, 'Track not found');
-
-  // 1. Try embedded lyrics from the audio file.
-  try {
-    const meta = await parseFile(row.file_path, { skipCovers: true, duration: false });
-    const common = (meta?.common ?? {}) as unknown as Record<string, unknown>;
-
-    // music-metadata exposes lyrics as ILyricsTag[] — each tag may carry
-    // synced lyrics in `syncText` or unsynced lyrics in `text`.
-    const lyricsTags = common.lyrics as Array<{
-      contentType?: number;
-      timeStampFormat?: number;
-      text?: string;
-      syncText?: Array<{ text: string; timestamp?: number }>;
-    }> | undefined;
-
-    if (Array.isArray(lyricsTags) && lyricsTags.length > 0) {
-      // Prefer synced lyrics from any tag that has them.
-      for (const tag of lyricsTags) {
-        const syncText = tag.syncText;
-        if (Array.isArray(syncText) && syncText.length > 0) {
-          const lines = syncText
-            .map((s) => ({
-              time: typeof s.timestamp === 'number' ? s.timestamp / 1000 : 0,
-              text: s.text ?? '',
-            }))
-            .filter((l) => l.text.length > 0);
-          if (lines.length > 0) {
-            return ok(res, { synced: true, lines, plainText: null });
-          }
-        }
-      }
-
-      // Fall back to unsynced text from any tag that has it.
-      for (const tag of lyricsTags) {
-        const text = tag.text;
-        if (typeof text === 'string' && text.trim().length > 0) {
-          const trimmed = text.trim();
-          // Check if the text is actually LRC format
-          const parsed = parseLrc(trimmed);
-          if (parsed.length > 0) {
-            return ok(res, { synced: true, lines: parsed, plainText: null });
-          }
-          return ok(res, { synced: false, lines: null, plainText: trimmed });
-        }
-      }
-    }
-  } catch {
-    // File may be unavailable — fall through to sidecar check.
-  }
-
-  // 2. Try sidecar .lrc / .txt file.
-  const sidecar = readSidecarLyrics(row.file_path);
-  if (sidecar) {
-    if (sidecar.synced) {
-      const parsed = parseLrc(sidecar.content);
-      if (parsed.length > 0) {
-        return ok(res, { synced: true, lines: parsed, plainText: null });
-      }
-    }
-    const text = sidecar.content.trim();
-    if (text.length > 0) {
-      return ok(res, { synced: false, lines: null, plainText: text });
-    }
-  }
-
-  // 3. No lyrics found.
-  return ok(res, null);
+  const lyrics = await getLyricsForTrack(row, { refresh: req.query.refresh === '1' });
+  return ok(res, lyrics);
 }));
 
 const MIME_BY_EXT: Record<string, string> = {

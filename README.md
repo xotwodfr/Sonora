@@ -52,6 +52,46 @@ MUSIC_PATH=/path/to/music DATA_PATH=/tmp/sonora-data npm run dev
                        # → http://localhost:5173 (proxies /api to :8787)
 ```
 
+## Desktop app (Windows .exe)
+
+Sonora also ships as a standalone desktop app: pick a folder, it plays from there.
+No Docker, no setup.
+
+1. Run `Sonora-<version>-portable.exe` (no installer; your library, playlists and
+   settings are kept in `%APPDATA%\Sonora`).
+2. Click **Choose music folder** and select the folder your music is in. Sonora
+   reads it in place and never changes your files.
+
+The app is not code-signed, so Windows SmartScreen may warn on first run: choose
+**More info → Run anyway**.
+
+### Lyrics
+
+Sonora shows synced or plain lyrics from, in order of priority:
+
+1. **Local files** next to the track with the same name: `.ttml` (including
+   word-by-word), `.lrc` (including enhanced LRC) and `.txt`; or lyrics embedded in
+   the file's tags. Time-synced local lyrics always win.
+2. **[Spicy Lyrics](https://developers.spicylyrics.org)**, if you add your API key in
+   **Settings → Lyrics**. Each track is matched to its Spotify track by title, artist,
+   album and length (only exact matches are accepted, so a live or remix version never
+   gets the wrong timings), then its lyrics are fetched and cached. Online lyrics are
+   credited under the lyrics, as Spicy Lyrics requires.
+3. Plain-text local lyrics (`.txt`) if nothing better exists.
+
+The key is stored on your computer only and sent only to `api.spicylyrics.org`.
+
+### Building the .exe
+
+Needs Node 22+. From the repo root (works on Linux, macOS or Windows):
+
+```bash
+cd desktop
+npm install
+npm run dist:win        # -> desktop/dist/Sonora-<version>-portable.exe
+npm start               # run the desktop app without packaging
+```
+
 ## Project structure
 
 ```
@@ -63,6 +103,7 @@ Sonora/
 │   │   ├── scanner/    music file scanner
 │   │   └── index.ts    entry point
 │   └── Dockerfile
+├── desktop/            Electron shell + packaging for the Windows .exe
 ├── frontend/           React + Vite + Tailwind SPA
 │   ├── src/
 │   │   ├── components/ layout, player, cards, tracks, UI
@@ -79,7 +120,7 @@ Sonora/
 
 | Variable     | Default              | Description                         |
 |--------------|----------------------|-------------------------------------|
-| `MUSIC_PATH` | `/music` (Docker)    | Path to music folder to scan        |
+| `MUSIC_PATH` | `/music` (Docker)    | Path to music folder to scan (the desktop app lets you pick it in the UI) |
 | `DATA_PATH`  | `/data` (Docker)     | Writable dir for SQLite + cache     |
 | `PORT`       | `8787`               | Backend listen port                 |
 | `HOSTNAME`   | `0.0.0.0` (Docker)   | Backend bind address                |

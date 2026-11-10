@@ -1,12 +1,13 @@
 {
   "name": "sonora-desktop",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "Sonora desktop packaging (Electron shell around the Sonora backend + frontend)",
   "scripts": {
     "stage": "node scripts/stage.mjs",
     "start": "npm run stage && electron app",
-    "dist:win": "npm run stage && electron-builder --config electron-builder.yml --win portable --x64"
+    "dist:win": "npm run stage && electron-builder --config electron-builder.yml --win portable --x64",
+    "dist:linux": "npm run stage && electron-builder --config electron-builder.yml --linux AppImage --x64"
   },
   "devDependencies": {
     "electron": "^45.2.3",

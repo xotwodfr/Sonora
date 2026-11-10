@@ -5,19 +5,22 @@ directories:
   buildResources: build
   output: dist
 # better-sqlite3 ships N-API prebuilds for every platform inside its package, so
-# nothing needs compiling or rebuilding for Electron / Windows.
+# nothing needs compiling or rebuilding for Electron on any platform.
 npmRebuild: false
+# No auto-update: releases are published by the GitHub workflow, not by electron-builder.
+publish: null
 asar: true
 asarUnpack:
   - "**/*.node"
 files:
   - "**/*"
-  # Only the Windows prebuild is needed, and not the SQLite C sources.
-  - "!node_modules/better-sqlite3/prebuilds/{darwin,linux,linuxmusl}-*.node"
-  - "!node_modules/better-sqlite3/prebuilds/win32-arm64.node"
+  # Never the SQLite C sources; each platform below keeps only its own prebuild.
   - "!node_modules/better-sqlite3/{deps,src}/**"
   - "!**/*.{md,markdown,map,ts}"
 win:
+  files:
+    - "!node_modules/better-sqlite3/prebuilds/{darwin,linux,linuxmusl}-*.node"
+    - "!node_modules/better-sqlite3/prebuilds/win32-arm64.node"
   target:
     - target: portable
       arch: x64
@@ -26,3 +29,17 @@ win:
   signAndEditExecutable: false
 portable:
   artifactName: Sonora-${version}-portable.exe
+linux:
+  files:
+    - "!node_modules/better-sqlite3/prebuilds/{darwin,linuxmusl}-*.node"
+    - "!node_modules/better-sqlite3/prebuilds/linux-arm64.node"
+    - "!node_modules/better-sqlite3/prebuilds/win32-*.node"
+  target:
+    - target: AppImage
+      arch: x64
+  icon: build/icon.png
+  executableName: sonora
+  category: AudioVideo
+  synopsis: Play the music in a folder, with synced lyrics
+appImage:
+  artifactName: Sonora-${version}-x86_64.AppImage

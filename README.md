@@ -52,18 +52,21 @@ MUSIC_PATH=/path/to/music DATA_PATH=/tmp/sonora-data npm run dev
                        # → http://localhost:5173 (proxies /api to :8787)
 ```
 
-## Desktop app (Windows .exe)
+## Desktop app (Windows and Linux)
 
 Sonora also ships as a standalone desktop app: pick a folder, it plays from there.
 No Docker, no setup.
 
-1. Run `Sonora-<version>-portable.exe` (no installer; your library, playlists and
-   settings are kept in `%APPDATA%\Sonora`).
+1. **Windows:** run `Sonora-<version>-portable.exe` (no installer; your library,
+   playlists and settings are kept in `%APPDATA%\Sonora`).
+   **Linux:** `chmod +x Sonora-<version>-x86_64.AppImage`, then run it (settings are kept
+   in `~/.config/Sonora`). If it won't start, install `libfuse2`, or run it with
+   `--appimage-extract-and-run`.
 2. Click **Choose music folder** and select the folder your music is in. Sonora
    reads it in place and never changes your files.
 
-The app is not code-signed, so Windows SmartScreen may warn on first run: choose
-**More info → Run anyway**.
+Downloads are on the [Releases](../../releases) page. The Windows app is not
+code-signed, so SmartScreen may warn on first run: choose **More info → Run anyway**.
 
 ### Lyrics
 
@@ -81,16 +84,20 @@ Sonora shows synced or plain lyrics from, in order of priority:
 
 The key is stored on your computer only and sent only to `api.spicylyrics.org`.
 
-### Building the .exe
+### Building the apps
 
-Needs Node 22+. From the repo root (works on Linux, macOS or Windows):
+Needs Node 22+. Both targets build on Linux (no Wine needed); CI builds each on its own OS.
 
 ```bash
 cd desktop
 npm install
 npm run dist:win        # -> desktop/dist/Sonora-<version>-portable.exe
+npm run dist:linux      # -> desktop/dist/Sonora-<version>-x86_64.AppImage
 npm start               # run the desktop app without packaging
 ```
+
+To publish a release, push a `release/vX.Y.Z` branch (or a `vX.Y.Z` tag): the
+**Release desktop apps** workflow builds both and attaches them, with checksums.
 
 ## Project structure
 

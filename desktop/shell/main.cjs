@@ -14,6 +14,17 @@ const PREFERRED_PORT = 38471;
 
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 
+// Chromium's sandbox needs unprivileged user namespaces. Some distros (Ubuntu 24.04+)
+// switch them off, and without this the app would crash on launch. Only in that case
+// run without the sandbox; the window only ever shows our own local pages.
+if (process.platform === 'linux') {
+  const fs = require('node:fs');
+  const sysctl = (name) => { try { return fs.readFileSync(`/proc/sys/kernel/${name}`, 'utf8').trim(); } catch { return null; } };
+  if (sysctl('apparmor_restrict_unprivileged_userns') === '1' || sysctl('unprivileged_userns_clone') === '0') {
+    app.commandLine.appendSwitch('no-sandbox');
+  }
+}
+
 let mainWindow = null;
 let backend = null;
 let origin = '';
